@@ -226,13 +226,13 @@ class Handler:
 
     def combine_data_to_xml(self, dir_to_process):
         combined_xml = '<structure>\n' + process_dir(dir_to_process) + '\n</structure>'
-
-        blob_file = open(self.outputfilename, 'w')
+        outname = self.outputfilename
+        blob_file = open(outname, 'w')
         blob_file.write(combined_xml)
         blob_file.close()
-        print("Xml generated: ", self.outputfilename)
+        print("Xml generated: ", outname)
 
-        return True
+        return outname
 
     def enum_xml_data(self, processed_dir):
         ext = 'unknown'

@@ -38,9 +38,7 @@ def process_nested_file(filename, taskid):
 
     is_xml = handler.check_xml()
     if is_xml:
-        print("List of tags found: ")
-        xml_tag_list = handler.enum_xml_tags()
-        print(xml_tag_list)
+
         # Extract and dump all files from XML file to output_dir
         output_dir = handler.enum_xml_data('extracted')
         # Detect file types and unpack archives
@@ -50,7 +48,9 @@ def process_nested_file(filename, taskid):
         # Execute white\blacklists & malicious checks
         process_decompiled_checker(output_dir)
         # Build outer xml file after removing malicious
-        handler.combine_data_to_xml(output_dir)
+        result_xml = handler.combine_data_to_xml(output_dir)
+        print(output_dir)
+        print(result_xml)
 
     print('---' * 30)
 

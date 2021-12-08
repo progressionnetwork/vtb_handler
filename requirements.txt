@@ -1,0 +1,11 @@
+filetype
+pyunpack
+lxml
+xmlschema
+yara
+yara-scanner
+yara-python
+networkx
+seedir
+matplotlib
+yattag
