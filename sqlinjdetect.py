@@ -9,6 +9,7 @@ demo5 = "FROM Suppliers WHERE Country='Germany';"
 
 
 def check_for_sql_inj(data):
+    
     # sql_keys = ['ADD', 'ALTER', 'ALTERCOLUMN', 'ALTERTABLE', 'ALL', 'AND', 'ANY', 'AS', 'ASC', 'BACKUPDATABASE',
     # 'BETWEEN', 'CASE', 'CHECK', 'COLUMN', 'CONSTRAINT', 'CREATE', 'CREATEDATABASE', 'CREATEINDEX',
     # 'CREATEORREPLACEVIEW', 'CREATETABLE', 'CREATEPROCEDURE', 'CREATEUNIQUEINDEX', 'CREATEVIEW', 'DELETE',
