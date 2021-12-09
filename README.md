@@ -14,7 +14,7 @@
 - Протоколирование и статистика обработанных файлов и вложений;
 
 ## Dashboard, панель администратора:
-![alt text](https://github.com/atomicai/justdoctor/blob/master/features_graph.png)
+![alt text](https://github.com/progressionnetwork/vtb_handler/blob/main/screens/Screenshot1.png?raw=true)
 Кабинет администратора позволяет видеть статистику по объектам и вложениям, дате и времени проверки, хэшу файла и статусу проверки.
 
 ## Что сделали на хакатоне:
@@ -72,7 +72,7 @@
 - Axios
 - PostgreSQL
 
-## Видео процесса работы бизнес лоигки на бекенде:
-![alt text](https://github.com/atomicai/justdoctor/blob/master/4.png)
+## Сгенерированный xml файл со случайной вложенностью и случайными файлами:
+![alt text](https://github.com/progressionnetwork/vtb_handler/blob/main/screens/Screenshot2.png?raw=true)
 
 ## Команда k0b1x \ 2021.
