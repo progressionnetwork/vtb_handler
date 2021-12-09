@@ -1,12 +1,16 @@
 from __future__ import print_function
 import datetime
+import seedir as sd  # pip install seedir
 import logging
 import json
 import os, sys
 import re
 import struct
+import shutil
 import tarfile
 import time
+import json
+import glob
 import zipfile, zlib
 import filetype  # pip install filetype
 import base64
@@ -30,14 +34,17 @@ from xml.sax.saxutils import quoteattr as xml_quoteattr
 import networkx as nx  # pip install networkx
 import random
 import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-import seedir as sd # pip install seedir
+import hashlib
 
 # Self modules
 import extension_db
 import vtscan
 from xmlprocessor import Target
+
+# BUF_SIZE is totally arbitrary, change for your app!
+BUF_SIZE = 65536  # lets read stuff in 64kb chunks!
+n = 0
+ID = 0
 
 
 class DetectDocument(object):
@@ -88,70 +95,6 @@ class DetectDocument(object):
                 self._is_json_file = True
             except ValueError:  # or in Python3 the specific error json.decoder.JSONDecodeError
                 pass
-
-
-def hierarchy_pos(G, root=None, width=1., vert_gap=0.2, vert_loc=0, xcenter=0.5):
-    '''
-    From Joel's answer at https://stackoverflow.com/a/29597209/2966723.
-    Licensed under Creative Commons Attribution-Share Alike
-
-    If the graph is a tree this will return the positions to plot this in a
-    hierarchical layout.
-
-    G: the graph (must be a tree)
-
-    root: the root node of current branch
-    - if the tree is directed and this is not given,
-      the root will be found and used
-    - if the tree is directed and this is given, then
-      the positions will be just for the descendants of this node.
-    - if the tree is undirected and not given,
-      then a random choice will be used.
-
-    width: horizontal space allocated for this branch - avoids overlap with other branches
-
-    vert_gap: gap between levels of hierarchy
-
-    vert_loc: vertical location of root
-
-    xcenter: horizontal location of root
-    '''
-    if not nx.is_tree(G):
-        raise TypeError('cannot use hierarchy_pos on a graph that is not a tree')
-
-    if root is None:
-        if isinstance(G, nx.DiGraph):
-            root = next(iter(nx.topological_sort(G)))  # allows back compatibility with nx version 1.11
-        else:
-            root = random.choice(list(G.nodes))
-
-    def _hierarchy_pos(G, root, width=1., vert_gap=0.2, vert_loc=0, xcenter=0.5, pos=None, parent=None):
-        '''
-        see hierarchy_pos docstring for most arguments
-
-        pos: a dict saying where all nodes go if they have been assigned
-        parent: parent of this branch. - only affects it if non-directed
-
-        '''
-
-        if pos is None:
-            pos = {root: (xcenter, vert_loc)}
-        else:
-            pos[root] = (xcenter, vert_loc)
-        children = list(G.neighbors(root))
-        if not isinstance(G, nx.DiGraph) and parent is not None:
-            children.remove(parent)
-        if len(children) != 0:
-            dx = width / len(children)
-            nextx = xcenter - width / 2 - dx / 2
-            for child in children:
-                nextx += dx
-                pos = _hierarchy_pos(G, child, width=dx, vert_gap=vert_gap,
-                                     vert_loc=vert_loc - vert_gap, xcenter=nextx,
-                                     pos=pos, parent=root)
-        return pos
-
-    return _hierarchy_pos(G, root, width, vert_gap, vert_loc, xcenter)
 
 
 class Handler:
@@ -509,8 +452,77 @@ def unpack_archive_data(filename, dest_dir):
 
     zip_file.close()
 
+def pack_zip_dir(path, ziph):
+    # ziph is zipfile handle
+    for root, dirs, files in os.walk(path):
+        for file in files:
+            ziph.write(os.path.join(root, file),
+                       os.path.relpath(os.path.join(root, file),
+                                       os.path.join(path, '..')))
 
-n = 0
+def process_folder_to_xml(path, out_file_name):
+    combined_xml = '<structure>\n' + process_dir(path) + '\n</structure>'
+    blob_file = open(out_file_name, 'w')
+    blob_file.write(combined_xml)
+    blob_file.close()
+    print("Output Xml generated: ", out_file_name)
+
+
+def move_files(from_dir):
+    src_path = from_dir
+    trg_path = os.path.abspath('MEDIA_ROOT' + '/tmp') # to_dir
+    for src_file in Path(src_path).glob('*.*'):
+        shutil.move(os.path.join(src_path, src_file), trg_path)
+        print("! Moved to temp dir:", src_file)
+    return True
+
+
+def remove_dirs_files(dir):
+    shutil.rmtree(dir)
+    print("! ReMoved dir with subdirs:", dir)
+    return True
+
+
+def process_restore_struct(path):
+    #hot_keys = ['_xml_','_zip_','_rar_','_tar_','_7z_','_json_']
+
+    # Build all files list to process
+    path = path + "/*/"
+
+    # Process enumerated files in list
+    for dir in glob.glob(path, recursive=True):
+        dir = os.path.abspath(dir)
+        parent_dir = os.path.basename(dir)
+
+        if '_xml_' in dir:
+            parent_dir_name = dir + '.xml'
+            print("Inner xml: ", parent_dir_name)
+            process_folder_to_xml(dir, parent_dir_name)
+            remove_dirs_files(dir)
+        elif '_zip_' in dir:
+            parent_dir_name = dir + '.zip'
+            print("Inner zip: ", parent_dir_name)
+            zipf = zipfile.ZipFile(parent_dir_name, 'w', zipfile.ZIP_DEFLATED)
+            pack_zip_dir(dir, zipf)
+            zipf.close()
+            remove_dirs_files(dir)
+        elif '_rar_' in dir:
+            parent_dir_name = dir + '/' + os.path.basename(dir) + '.rar'
+            # TODO: Implement rar packing
+        elif '_tar_' in dir:
+            parent_dir_name = dir + '/' + os.path.basename(dir) + '.tar'
+            # TODO: Implement rar packing
+        elif '_7z_' in dir:
+            parent_dir_name = dir + os.path.basename(dir) + '.7z'
+            zipf = zipfile.ZipFile(parent_dir_name, 'w', zipfile.ZIP_DEFLATED)
+            pack_zip_dir(dir, zipf)
+            zipf.close()
+            move_files(dir)
+        elif '_json_' in dir:
+            parent_dir_name = dir + '/' + os.path.basename(dir) + '.json'
+            # TODO: Implement JSON processing
+
+    return True
 
 
 def process_decompiled_from_xml(path, taskid):
@@ -555,7 +567,6 @@ def process_decompiled_from_xml(path, taskid):
             Path(processed_dir).mkdir(parents=True, exist_ok=True)
             print("* Processed dir:", processed_dir)
             output_dir = handler.enum_xml_data(processed_dir)
-            break
 
         elif handler.check_json():  # TODO JSON parser
             print(f"Valid JSON found!")
@@ -570,46 +581,38 @@ def process_decompiled_from_xml(path, taskid):
                 Path(processed_dir).mkdir(parents=True, exist_ok=True)
                 print("* Processed dir:", processed_dir)
                 unpack_archive_data(filename, processed_dir)
-                os.remove(filename)
-                print(filename, 'removed!!')
 
         elif 'x-rar-compressed' in mime:
-            print(f"RAR found!") # TODO: Implement rar support
+            print(
+                f"RAR found!")  # TODO: Implement rar support to process rar decompress we need Windows decompressor bin
             # create nested dir
             shortname = Path(filename).stem
-            processed_dir = path + shortname + '_rar_' +  str(n) + '/'
+            processed_dir = path + shortname + '_rar_' + str(n) + '/'
             Path(processed_dir).mkdir(parents=True, exist_ok=True)
             print("* Processed dir:", processed_dir)
             filename = rename_file(filename, 'rar')
-            #pyunpack.Archive(filename).extractall(processed_dir)
-            #os.remove(filename)
-            #print(filename, 'removed!!')
-            # to process rar decompress we need Windows decompressor bin
+            # pyunpack.Archive(filename).extractall(processed_dir)
 
         elif 'zip' in mime:
             filename = rename_file(filename, 'zip')
             if is_zip_file(filename):
                 # create nested dir
                 shortname = Path(filename).stem
-                processed_dir = path + shortname + '_zip_' +  str(n) + '/'
+                processed_dir = path + shortname + '_zip_' + str(n) + '/'
                 Path(processed_dir).mkdir(parents=True, exist_ok=True)
                 print("* Processed dir:", processed_dir)
                 print(f"ZIP found!")
                 unpack_archive_data(filename, processed_dir)
-                os.remove(filename)
-                print(filename, 'removed!!')
 
         elif 'x-tar' in mime:
             filename = rename_file(filename, 'tar')
             if is_tar_file(filename):
                 # create nested dir
                 shortname = Path(filename).stem
-                processed_dir = path + shortname + str(n) + '/'
+                processed_dir = path + shortname + '_tar_' + str(n) + '/'
                 Path(processed_dir).mkdir(parents=True, exist_ok=True)
                 print("* Processed dir:", processed_dir)
                 process_tar_archive(filename)
-                os.remove(filename)
-                print(filename, 'removed!!')
 
         elif "rtf" in mime:
             filename = rename_file(filename, 'rtf')
@@ -649,35 +652,74 @@ def process_decompiled_from_xml(path, taskid):
         n += 1
 
 
-def visualize_fs_struct(process_dir, result):
+def get_sha1(path):
+    sha1 = hashlib.sha1()
+
+    with open(path, 'rb') as f:
+        while True:
+            data = f.read(BUF_SIZE)
+            if not data:
+                break
+            sha1.update(data)
+
+    sha1 = format(sha1.hexdigest())
+    return sha1
+
+
+def get_md5(path):
+    md5 = hashlib.md5()
+
+    with open(path, 'rb') as f:
+        while True:
+            data = f.read(BUF_SIZE)
+            if not data:
+                break
+            md5.update(data)
+
+    md5 = str(format(md5.hexdigest()))
+    return md5
+
+
+def path_to_dict(path):
+    global ID
+
+    d = {
+        'id': ID,
+        'name': os.path.basename(path),
+        'path': os.path.abspath(path)
+    }
+    if os.path.isdir(path):
+        d['type'] = "directory"
+        d['children'] = [path_to_dict(os.path.join(path, x)) for x in os.listdir(path)]
+    else:
+        d['type'] = "file"
+        d['ext'] = os.path.splitext(path)[1]
+        d['size'] = round(os.path.getsize(path) / 1024)
+        #d['malicious'] = False
+        d['sha1'] = get_sha1(path)
+        d['md5'] = get_md5(path)
+    ID += 1
+    return d
+
+
+def process_json_report(path):
+    report_struct_json = path_to_dict(path)
+    entry = {
+        'input_xml_file': '',
+        'output_xml_file': '',
+        'malicious_objects': 0,
+        'input_xml_size': 0,
+    }
+    report_struct_json['xml_data'] = entry
+    return report_struct_json
+
+
+def visualize_fs_struct(process_dir, result_file):
     tree = sd.seedir(process_dir, printout=False, style='emoji')
 
-    with open('tree.txt', 'w', encoding='utf-8') as file:
+    with open(result_file, 'w', encoding='utf-8') as file:
         file.write(tree)
         file.close()
-
-    # G = nx.Graph()
-    # i = 0
-    # for (path, dirs, files) in os.walk(process_dir):
-    #     bname = os.path.split(path)
-    #     G.add_node(bname)
-    #     for f in files:
-    #         G.add_node(bname)
-    #         G.add_edge(bname, f)
-    #         #G.add_edge(i, bname)
-    #         i += 1
-    # f = plt.figure(1, figsize=(40, 40), dpi=100)
-    # nx.draw(G,
-    #         node_color='lightgreen',
-    #         width=15,
-    #         node_size=120,
-    #         font_size=12,
-    #         with_labels=True,
-    #         arrows=True,
-    #         node_shape="s",
-    #         alpha=0.5,
-    #         linewidths=9)
-    # f.savefig(result)
 
 
 def check_for_RTL_exploit(filename):
@@ -732,8 +774,26 @@ def process_officedoc_macroscheck(filename):
     return ret
 
 
+def b64enc(s):
+    return base64.b64encode(s).decode()
+
+
+def file_to_base64_buf(filename):
+    with open(filename, 'rb') as file:
+        blob = file.read()
+        blob = b64enc(blob)
+        file.close()
+    return blob
+
+
 def process_decompiled_checker(path):
     f = []
+    malicious_list = []
+    total_objects = 0
+    total_malicious = 0
+    total_archives = 0
+
+    malicious_blobs = {}
 
     print("* Processed dir:", path)
 
@@ -747,6 +807,8 @@ def process_decompiled_checker(path):
     for filename in f:
         print('***' * 30)
 
+        total_objects += 1
+
         filename = filename.replace('\\', '/').lower()
         print("* Processed file:", filename)
 
@@ -758,6 +820,7 @@ def process_decompiled_checker(path):
                 if ext == item:
                     print('File is archives_exts, we need to remove it!')
                     os.remove(filename)
+                    total_archives += 1
                     print("# Archive ", filename, 'removed!!')
         except:
             pass
@@ -774,17 +837,30 @@ def process_decompiled_checker(path):
             for item in extension_db.middlelist_exts:
                 if ext == item or ext == 'unknown':
                     print('File is middlelist, we need to check it!')
+
                     if ext == 'docx' or ext == 'xlsx' or ext == 'docm' or ext == 'docm' or ext == 'xlsm':
                         if process_officedoc_macroscheck(filename):
+                            malicious_list.append(os.path.abspath(filename))
+                            blob = file_to_base64_buf(filename)
+                            malicious_blobs[os.path.abspath(filename)] = blob
                             os.remove(filename)
                             print(filename, 'MALICIOUS removed!!')
+                            total_malicious += 1
                             break
+
                     # if check_yara(filename):
+                    #     malicious_list.append(os.path.abspath(filename))
                     #     os.remove(filename)
                     #     print(filename, 'MALICIOUS removed!!')
+                    #     total_malicious += 1
                     #     break
+
                     if scan_obj_av(filename):
+                        malicious_list.append(os.path.abspath(filename))
+                        blob = file_to_base64_buf(filename)
+                        malicious_blobs[os.path.abspath(filename)] = blob
                         os.remove(filename)
+                        total_malicious += 1
                         print(filename, 'MALICIOUS removed!!')
                         break
         except:
@@ -794,10 +870,14 @@ def process_decompiled_checker(path):
             for item in extension_db.blacklist_exts:
                 if ext == item:
                     print('File is blacklist, we need to remove it!')
+                    malicious_list.append(os.path.abspath(filename))
+                    blob = file_to_base64_buf(filename)
+                    malicious_blobs[os.path.abspath(filename)] = blob
+                    total_malicious += 1
                     os.remove(filename)
                     print(filename, 'removed!!')
                     break
         except:
             pass
 
-    return True
+    return total_objects, total_malicious, total_archives, malicious_list, malicious_blobs

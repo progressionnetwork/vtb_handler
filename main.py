@@ -4,12 +4,14 @@ import logging
 import os, sys
 from pathlib import Path
 import time
-from handler import Handler, DetectDocument, process_decompiled_from_xml, process_decompiled_checker, visualize_fs_struct
+from handler import Handler, DetectDocument, process_decompiled_from_xml, process_decompiled_checker, visualize_fs_struct, process_json_report, process_restore_struct
 import binascii
 import extension_db
 import random as r
 import yara  # pip install yara-python
 from yara_scanner import YaraScanner  # pip install yara-scanner
+
+GLOBAL_PATH = 'MEDIA_ROOT'
 
 
 def process_nested_file(filename, taskid):
@@ -19,7 +21,7 @@ def process_nested_file(filename, taskid):
         blob = f.read()
 
     shortname = Path(filename).stem
-    outputfilename = 'processed/' + shortname + '_' + taskid + '.xml'
+    outputfilename = GLOBAL_PATH + '/processed/' + shortname + '_' + taskid + '.xml'
     handler = Handler(filename, blob, taskid, outputfilename)
     file_extension = handler.get_ext().lower()
     print(f"Extension: {file_extension}")
@@ -40,19 +42,36 @@ def process_nested_file(filename, taskid):
     if is_xml:
 
         # Extract and dump all files from XML file to output_dir
-        output_dir = handler.enum_xml_data('extracted')
+        output_dir = handler.enum_xml_data(GLOBAL_PATH + '/extracted')
         # Detect file types and unpack archives
         process_decompiled_from_xml(output_dir, taskid)
         # Generate visualization tree of file struct
-        visualize_fs_struct(output_dir, "graph.png")
+        #visualize_fs_struct(output_dir, GLOBAL_PATH + '/tree.txt')
+        # Generate JSON report
+        report = process_json_report(output_dir)
         # Execute white\blacklists & malicious checks
-        process_decompiled_checker(output_dir)
+        total_objects, total_malicious, total_archives, malicious_list, malicious_blobs = process_decompiled_checker(output_dir)
+        # Compress archives and XML back, restore structure
+        process_restore_struct(output_dir)
         # Build outer xml file after removing malicious
         result_xml = handler.combine_data_to_xml(output_dir)
-        print(output_dir)
-        print(result_xml)
 
-    print('---' * 30)
+        report['xml_data']['input_xml_file'] = filename
+        report['xml_data']['output_xml_file'] = os.path.abspath(result_xml)
+        report['xml_data']['input_xml_size'] = round(os.path.getsize(filename) / 1024)
+        report['xml_data']['output_xml_size'] = round(os.path.getsize(result_xml) / 1024)
+        report['xml_data']['total_objects'] = total_objects
+        report['xml_data']['malicious_objects'] = total_malicious
+        report['xml_data']['malicious_list'] = malicious_list
+        report['xml_data']['malicious_blobs'] = malicious_blobs
+        report['xml_data']['total_archives'] = total_archives
+        report['xml_data']['tags'] = handler.enum_xml_tags()
+
+        print(json.dumps(report, indent=4))
+        with open('report.json', 'w', encoding='utf-8') as f:
+            json.dump(report, f, ensure_ascii=False, indent=4)
+            f.close()
+        print('---' * 30)
 
 
 if __name__ == '__main__':
@@ -60,24 +79,14 @@ if __name__ == '__main__':
     print('Starting handler...')
 
     taskid = time.strftime("%d_%H%M") + str(r.randrange(77,7777))
-    #logging.basicConfig(filename='process' + str(taskid) + '.log', encoding='utf-8', level=logging.DEBUG)
+    filename = GLOBAL_PATH + "/xmls/2_sample_BN2D9R.xml"
 
-    # filename = "xmls/2_sample_BN2D9R.xml"
-    path = "xmls/"
+    filename = os.path.abspath(filename)
+    filename = filename.lower()
+    logging.info('File:', filename)
+    process_nested_file(filename, taskid)
 
-    f = []
-    for (dirpath, dirnames, filenames) in os.walk(path):
-        f.extend(filenames)
-        break
-
-    for filename in f:
-
-        filename = path + filename
-        filename = filename.lower()
-        logging.info('File:', filename)
-        process_nested_file(filename, taskid)
-
-        sys.exit()
+    sys.exit()
 
         # with open(filename, 'rb') as f:
         #     blob = f.read()
