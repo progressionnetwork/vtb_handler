@@ -25,7 +25,7 @@ import lxml
 import lxml.etree
 import xmlschema
 import xml.etree.ElementTree as elementTree
-import yara
+# import yara
 from pprint import pprint
 # from yara_scanner import YaraScanner
 from pip._internal.utils import logging
@@ -481,7 +481,7 @@ def process_folder_to_xml(path, out_file_name):
 
 def move_files(from_dir):
     src_path = from_dir
-    trg_path = os.path.abspath('MEDIA_ROOT' + '/tmp')  # to_dir
+    trg_path = os.path.abspath('media' + '/tmp')  # to_dir
     for src_file in Path(src_path).glob('*.*'):
         shutil.move(os.path.join(src_path, src_file), trg_path)
         print("! Moved to temp dir:", src_file)
@@ -550,7 +550,7 @@ def process_decompiled_from_xml(path, taskid):
     for filename in f:
         print('***' * 30)
 
-        filename = filename.replace('\\', '/').lower()
+        filename = filename.replace('\\', '/')
         print("* Processed file:", filename)
 
         # read file to buffer
@@ -848,7 +848,7 @@ def process_decompiled_checker(path):
 
         total_objects += 1
 
-        filename = filename.replace('\\', '/').lower()
+        filename = filename.replace('\\', '/')
         print("* Processed file:", filename)
 
         _, ext = os.path.splitext(filename)

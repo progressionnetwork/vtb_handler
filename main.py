@@ -8,10 +8,10 @@ from api.services.vtb_handler.handler import Handler, DetectDocument, process_de
 import binascii
 import api.services.vtb_handler.extension_db
 import random as r
-import yara  # pip install yara-python
+# import yara  # pip install yara-python
 # from yara_scanner import YaraScanner  # pip install yara-scanner
 from Config.settings import MEDIA_ROOT
-GLOBAL_PATH = MEDIA_ROOT.lower()
+GLOBAL_PATH = MEDIA_ROOT[:-1]
 
 
 def process_nested_file(filename, taskid):
@@ -84,7 +84,7 @@ def file_checker(file_path):
     # filename = GLOBAL_PATH + "/xmls/2_sample_BN2D9R.xml"
 
     # filename = os.path.abspath(filename)
-    file_path = file_path.lower()
+    file_path = file_path
     logging.info('File:', file_path)
     return process_nested_file(file_path, taskid)
 
