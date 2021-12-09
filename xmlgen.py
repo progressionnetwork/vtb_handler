@@ -8,7 +8,6 @@ import string
 from yattag import Doc, indent  # pip install yattag
 import base64
 
-
 """
 XMLGEN XML/JSON sample files generator.
 Able to generate non-standard XML nasted structures with multiple layers.
@@ -146,7 +145,7 @@ def gen_xml_enchanted_vtb(filename, words):
                         name = id_generator()
 
                         selected_file = r.choice(f)
-                        value_name = (str(vid)) + '_' + selected_file.replace('.','_')
+                        value_name = (str(vid)) + '_' + selected_file.replace('.', '_')
                         sample_file = path + selected_file
                         print("Sample file: ", sample_file)
                         with open(sample_file, 'rb') as file:
@@ -156,7 +155,8 @@ def gen_xml_enchanted_vtb(filename, words):
                         if num == 0:
                             doc.asis('\n<!-- random word -->')
                             data = wordset
-                            with tag(r.choice(subtags), name=r.choice(words), type="random word", value=str(i), id=(str(vid))):
+                            with tag(r.choice(subtags), name=r.choice(words), type="random word", value=str(i),
+                                     id=(str(vid))):
                                 text(data)
                         if num == 1:
                             doc.asis('\n<!-- encoded base64 file -->')
@@ -176,7 +176,7 @@ def gen_xml_enchanted_vtb(filename, words):
                         if num == 4:
                             doc.asis('\n<!-- random word -->')
                             data = r.choice(words)
-                            with tag(r.choice(subtags), type="random word",):
+                            with tag(r.choice(subtags), type="random word", ):
                                 text(data)
                         vid = + 1
 
@@ -190,7 +190,7 @@ def gen_xml_enchanted_vtb(filename, words):
     f.write(result)
     f.close()
 
-    #print(result)
+    # print(result)
 
 
 if __name__ == '__main__':

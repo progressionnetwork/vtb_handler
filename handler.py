@@ -198,6 +198,9 @@ class Handler:
                     if len(data.text) < 1024:
                         continue
 
+                    if check_for_sql_inj(data.text):
+                        print('Sql Injection attempt found!')
+
                     content = (data.text[:15] + '..') if len(data.text) > 15 else data.text
                     print(content)
                     print("level:", nested)
@@ -881,3 +884,14 @@ def process_decompiled_checker(path):
             pass
 
     return total_objects, total_malicious, total_archives, malicious_list, malicious_blobs
+
+
+def check_for_sql_inj(data):
+    #sql_keys = ['ADD', 'ALTER', 'ALTERCOLUMN', 'ALTERTABLE', 'ALL', 'AND', 'ANY', 'AS', 'ASC', 'BACKUPDATABASE', 'BETWEEN', 'CASE', 'CHECK', 'COLUMN', 'CONSTRAINT', 'CREATE', 'CREATEDATABASE', 'CREATEINDEX', 'CREATEORREPLACEVIEW', 'CREATETABLE', 'CREATEPROCEDURE', 'CREATEUNIQUEINDEX', 'CREATEVIEW', 'DELETE', 'DISTINCT', 'DROP', 'DROPCOLUMN', 'DROPCONSTRAINT', 'DROPDATABASE', 'DROPDEFAULT', 'DROPINDEX', 'DROPTABLE', 'DROPVIEW', 'EXEC', 'EXISTS', 'FOREIGNKEY', 'FROM', 'FULLOUTERJOIN', 'GROUPBY', 'HAVING', 'IN', 'INDEX', 'INNERJOIN', 'INSERTINTO', 'INSERTINTOSELECT', 'ISNULL', 'ISNOTNULL', 'JOIN', 'LEFTJOIN', 'LIKE', 'LIMIT', 'NOT', 'NOTNULL', 'OR', 'ORDERBY', 'OUTERJOIN', 'PRIMARYKEY', 'PROCEDURE', 'RIGHTJOIN', 'ROWNUM', 'SELECT', 'SELECTDISTINCT', 'SELECTINTO', 'SELECTTOP', 'SET', 'TABLE', 'TOP', 'TRUNCATETABLE', 'UNION', 'UNIONALL', 'UNIQUE', 'UPDATE', 'VALUES', 'VIEW', 'WHERE']
+    sql_keys = ['INSERT', 'INTO', 'VALUES', 'SELECT', 'FROM', 'WHERE']
+    data = data.lower()
+    for key in sql_keys:
+        if key.lower() in data:
+            print('Sql Injection attempt found!')
+            return True
+    return False

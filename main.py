@@ -46,7 +46,7 @@ def process_nested_file(filename, taskid):
         # Detect file types and unpack archives
         process_decompiled_from_xml(output_dir, taskid)
         # Generate visualization tree of file struct
-        #visualize_fs_struct(output_dir, GLOBAL_PATH + '/tree.txt')
+        visualize_fs_struct(output_dir, GLOBAL_PATH + '/tree.txt')
         # Generate JSON report
         report = process_json_report(output_dir)
         # Execute white\blacklists & malicious checks
