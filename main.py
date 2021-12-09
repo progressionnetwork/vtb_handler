@@ -67,7 +67,7 @@ def process_nested_file(filename, taskid):
         report['xml_data']['total_archives'] = total_archives
         report['xml_data']['tags'] = handler.enum_xml_tags()
 
-        return report
+        return report,outputfilename
         # with open('report.json', 'w', encoding='utf-8') as f:
         #     json.dump(report, f, ensure_ascii=False, indent=4)
         #     f.close()
