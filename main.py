@@ -4,14 +4,14 @@ import logging
 import os, sys
 from pathlib import Path
 import time
-from handler import Handler, DetectDocument, process_decompiled_from_xml, process_decompiled_checker, visualize_fs_struct, process_json_report, process_restore_struct
+from api.services.vtb_handler.handler import Handler, DetectDocument, process_decompiled_from_xml, process_decompiled_checker, visualize_fs_struct, process_json_report, process_restore_struct
 import binascii
-import extension_db
+import api.services.vtb_handler.extension_db
 import random as r
 import yara  # pip install yara-python
-from yara_scanner import YaraScanner  # pip install yara-scanner
-
-GLOBAL_PATH = 'MEDIA_ROOT'
+# from yara_scanner import YaraScanner  # pip install yara-scanner
+from Config.settings import MEDIA_ROOT
+GLOBAL_PATH = MEDIA_ROOT.lower()
 
 
 def process_nested_file(filename, taskid):
@@ -57,7 +57,7 @@ def process_nested_file(filename, taskid):
         result_xml = handler.combine_data_to_xml(output_dir)
 
         report['xml_data']['input_xml_file'] = filename
-        report['xml_data']['output_xml_file'] = os.path.abspath(result_xml)
+        report['xml_data']['output_xml_file'] = result_xml.replace(MEDIA_ROOT,"")
         report['xml_data']['input_xml_size'] = round(os.path.getsize(filename) / 1024)
         report['xml_data']['output_xml_size'] = round(os.path.getsize(result_xml) / 1024)
         report['xml_data']['total_objects'] = total_objects
@@ -67,26 +67,41 @@ def process_nested_file(filename, taskid):
         report['xml_data']['total_archives'] = total_archives
         report['xml_data']['tags'] = handler.enum_xml_tags()
 
-        print(json.dumps(report, indent=4))
-        with open('report.json', 'w', encoding='utf-8') as f:
-            json.dump(report, f, ensure_ascii=False, indent=4)
-            f.close()
-        print('---' * 30)
+        return report
+        # with open('report.json', 'w', encoding='utf-8') as f:
+        #     json.dump(report, f, ensure_ascii=False, indent=4)
+        #     f.close()
+        # print('---' * 30)
 
 
-if __name__ == '__main__':
+    
 
+def file_checker(file_path):
+    print(file_path)
     print('Starting handler...')
 
     taskid = time.strftime("%d_%H%M") + str(r.randrange(77,7777))
-    filename = GLOBAL_PATH + "/xmls/2_sample_BN2D9R.xml"
+    # filename = GLOBAL_PATH + "/xmls/2_sample_BN2D9R.xml"
 
-    filename = os.path.abspath(filename)
-    filename = filename.lower()
-    logging.info('File:', filename)
-    process_nested_file(filename, taskid)
+    # filename = os.path.abspath(filename)
+    file_path = file_path.lower()
+    logging.info('File:', file_path)
+    return process_nested_file(file_path, taskid)
 
-    sys.exit()
+
+# if __name__ == '__main__':
+#
+#     print('Starting handler...')
+#
+#     taskid = time.strftime("%d_%H%M") + str(r.randrange(77,7777))
+#     filename = GLOBAL_PATH + "/xmls/2_sample_BN2D9R.xml"
+#
+#     filename = os.path.abspath(filename)
+#     filename = filename.lower()
+#     logging.info('File:', filename)
+#     process_nested_file(filename, taskid)
+#
+#     sys.exit()
 
         # with open(filename, 'rb') as f:
         #     blob = f.read()

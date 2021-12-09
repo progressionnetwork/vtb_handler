@@ -27,7 +27,7 @@ import xmlschema
 import xml.etree.ElementTree as elementTree
 import yara
 from pprint import pprint
-from yara_scanner import YaraScanner
+# from yara_scanner import YaraScanner
 from pip._internal.utils import logging
 from zipfile import ZipFile
 import xml.etree.cElementTree as ET
@@ -43,9 +43,9 @@ import subprocess
 import psutil
 
 # Self modules
-import extension_db
-import vtscan
-from xmlprocessor import Target
+import api.services.vtb_handler.extension_db as extension_db
+import api.services.vtb_handler.vtscan as vtscan
+from api.services.vtb_handler.xmlprocessor import Target
 
 # BUF_SIZE is totally arbitrary, change for your app!
 BUF_SIZE = 65536  # lets read stuff in 64kb chunks!
@@ -741,19 +741,19 @@ def check_for_RTL_exploit(filename):
     return False
 
 
-def check_yara(filename):
-    hdict = {}
-    scanner = YaraScanner(signature_dir='yararules')
-    scanner.load_rules()
-
-    if scanner.scan(filename):
-        # pprint(scanner.scan_results)
-        malware_name = scanner.scan_results
-        print(malware_name)
-
-        if malware_name:
-            return True
-    return False
+# def check_yara(filename):
+#     hdict = {}
+#     scanner = YaraScanner(signature_dir='yararules')
+#     scanner.load_rules()
+#
+#     if scanner.scan(filename):
+#         # pprint(scanner.scan_results)
+#         malware_name = scanner.scan_results
+#         print(malware_name)
+#
+#         if malware_name:
+#             return True
+#     return False
 
 
 def scan_on_virustotal(filename):
