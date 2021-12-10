@@ -273,5 +273,5 @@
     "malicious_folder": "/home/app/web/api/services/vtb_handler/media/tmp/179649",
     "malicious_objects": 3
   }
-}```
+}
 
