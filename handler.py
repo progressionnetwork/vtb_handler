@@ -43,8 +43,9 @@ import subprocess
 import psutil
 
 # Self modules for PROD
-import api.services.vtb_handler.extension_db
-import api.services.vtb_handler.vtscan
+# Self modules for PROD
+import api.services.vtb_handler.extension_db as extension_db
+import api.services.vtb_handler.vtscan as vtscan
 from api.services.vtb_handler.xmlprocessor import Target
 # Self modules for DEBUG
 # import extension_db as extension_db
