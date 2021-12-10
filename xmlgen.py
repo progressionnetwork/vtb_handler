@@ -126,7 +126,7 @@ def gen_xml_enchanted_vtb(filename, words):
     doc, tag, text = Doc().tagtext()
 
     vid = 0
-    path = "samples/"
+    path = "media/samples/"
 
     f = []
     for (dirpath, dirnames, filenames) in os.walk(path):
@@ -199,8 +199,8 @@ if __name__ == '__main__':
     words = [word for line in f for word in line.split()]
 
     for i in range(r.randrange(NUM_OF_FILES_MIN, NUM_OF_FILES_MAX)):
-        fname = "xmls/sample_" + id_generator() + '.xml'
+        fname = "media/xmls/sample_" + id_generator() + '.xml'
         print(f"{i}. Generating: ", fname)
-        gen_xml_enchanted_vtb(f"xmls/{i}_sample_" + id_generator() + '.xml', words)
+        gen_xml_enchanted_vtb(fname, words)
 
     sys.exit()
