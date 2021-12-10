@@ -1,17 +1,26 @@
+PRODUCT = False
+
 import base64
 import json
 import logging
 import os, sys
 from pathlib import Path
 import time
-from api.services.vtb_handler.handler import Handler, DetectDocument, process_decompiled_from_xml, process_decompiled_checker, visualize_fs_struct, process_json_report, process_restore_struct
+from api.services.vtb_handler.handler import Handler, DetectDocument, process_decompiled_from_xml, process_decompiled_checker, visualize_fs_struct, process_json_report, process_restore_struct, process_enum_malicious
+# Self modules for DEBUG
+#from handler import Handler, DetectDocument, process_decompiled_from_xml, process_decompiled_checker, visualize_fs_struct, process_json_report, process_restore_struct, process_enum_malicious
 import binascii
-import api.services.vtb_handler.extension_db
+import extension_db
 import random as r
 # import yara  # pip install yara-python
 # from yara_scanner import YaraScanner  # pip install yara-scanner
+
+# Config for PROD
 from Config.settings import MEDIA_ROOT
 GLOBAL_PATH = MEDIA_ROOT[:-1]
+# Config for DEBUG
+# GLOBAL_PATH = 'media'
+# MEDIA_ROOT = 'media'
 
 
 def process_nested_file(filename, taskid):
@@ -50,12 +59,15 @@ def process_nested_file(filename, taskid):
         # Generate JSON report
         report = process_json_report(output_dir)
         # Execute white\blacklists & malicious checks
-        total_objects, total_malicious, total_archives, malicious_list, malicious_blobs = process_decompiled_checker(output_dir)
+        total_objects, total_malicious, total_archives, malicious_list, folder_name = process_decompiled_checker(output_dir)
+        # Extact malicious file names from temp dir
+        malw_list = process_enum_malicious(folder_name)
         # Compress archives and XML back, restore structure
         process_restore_struct(output_dir)
         # Build outer xml file after removing malicious
         result_xml = handler.combine_data_to_xml(output_dir)
 
+        report['xml_data']['uniq_id'] = taskid
         report['xml_data']['input_xml_file'] = filename
         report['xml_data']['output_xml_file'] = result_xml.replace(MEDIA_ROOT,"")
         report['xml_data']['input_xml_size'] = round(os.path.getsize(filename) / 1024)
@@ -63,18 +75,18 @@ def process_nested_file(filename, taskid):
         report['xml_data']['total_objects'] = total_objects
         report['xml_data']['malicious_objects'] = total_malicious
         report['xml_data']['malicious_list'] = malicious_list
-        report['xml_data']['malicious_blobs'] = malicious_blobs
         report['xml_data']['total_archives'] = total_archives
         report['xml_data']['tags'] = handler.enum_xml_tags()
+        report['xml_data']['malicious_folder'] = GLOBAL_PATH + '/tmp/' + folder_name
+        report['xml_data']['malicious_paths'] = malw_list
 
+        with open('report.json', 'w', encoding='utf-8') as f:
+            json.dump(report, f, ensure_ascii=False, indent=4)
+            f.close()
         return report,outputfilename
-        # with open('report.json', 'w', encoding='utf-8') as f:
-        #     json.dump(report, f, ensure_ascii=False, indent=4)
-        #     f.close()
+
         # print('---' * 30)
 
-
-    
 
 def file_checker(file_path):
     print(file_path)
@@ -102,51 +114,3 @@ def file_checker(file_path):
 #     process_nested_file(filename, taskid)
 #
 #     sys.exit()
-
-        # with open(filename, 'rb') as f:
-        #     blob = f.read()
-        #
-        # handler = Handler(filename, blob)
-        # file_extension = handler.get_ext().lower()
-        # print(f"Extension: {file_extension}")
-        # ret = handler.check_ext()
-        #
-        # if 'xml' in file_extension:
-        #     print(f"XML found!")
-        #     handler.check_xml()
-        #     print("List of tags found: ")
-        #     result = handler.enum_xml_tags()
-        #     print(result)
-        #
-        # if len(file_extension) == 0:
-        #     print("File or blob without extension!!!")
-        # if file_extension in extension_db.blacklist_exts:
-        #     print('! Is blacklisted: {}'.format(ret))
-        #     print('* Executing a deep scan!')
-        # if file_extension in extension_db.middlelist_exts:
-        #     print('! Is middlelisted, need additional check: {}'.format(ret))
-        # if file_extension in extension_db.whitelist_exts:
-        #     print('! Is whitelisted: {}'.format(ret))
-        #     print('! Noting to scan!')
-        #     sys.exit(1)
-        #
-        #
-        # sys.exit(1)
-        #
-        # mime = handler.check_header()
-        # handler.check_yara()
-        #
-        # # Check if file is JSON or XML
-        # detector = DetectDocument(filename)
-        #
-        # print("{file_type}: \n\t is_json:{is_json_file} \n\t is_xml:{is_xml_file}".format(
-        #     file_type=detector._parsed_file,
-        #     is_json_file=detector.is_json_file,
-        #     is_xml__file=detector.is_xml_file)
-        # )
-        #
-        # # handler.check_base64()
-        # handler.check_json()
-
-
-        # handler.check_xml()

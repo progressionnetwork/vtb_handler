@@ -42,10 +42,14 @@ import hashlib
 import subprocess
 import psutil
 
-# Self modules
-import api.services.vtb_handler.extension_db as extension_db
-import api.services.vtb_handler.vtscan as vtscan
+# Self modules for PROD
+import api.services.vtb_handler.extension_db
+import api.services.vtb_handler.vtscan
 from api.services.vtb_handler.xmlprocessor import Target
+# Self modules for DEBUG
+# import extension_db as extension_db
+# import vtscan as vtscan
+# from xmlprocessor import Target
 
 # BUF_SIZE is totally arbitrary, change for your app!
 BUF_SIZE = 65536  # lets read stuff in 64kb chunks!
@@ -488,9 +492,20 @@ def move_files(from_dir):
     return True
 
 
+def move_file(from_path, folder_name):
+    filename = os.path.basename(from_path)
+    to_path =  os.path.abspath('media' + '/tmp/' + str(folder_name)) + '/'
+    print("* Malicious dir:", to_path)
+    Path(to_path).mkdir(parents=True, exist_ok=True)
+    to_path = os.path.abspath(to_path + '/' + filename)
+    shutil.move(from_path, to_path)
+    print("! File moved to:", to_path)
+    return True
+
+
 def remove_dirs_files(dir):
     shutil.rmtree(dir)
-    print("! ReMoved dir with subdirs:", dir)
+    print("! Removed dir with subdirs:", dir)
     return True
 
 
@@ -834,6 +849,8 @@ def process_decompiled_checker(path):
 
     malicious_blobs = {}
 
+    folder_name = str(r.randrange(777, 777777))
+
     print("* Processed dir:", path)
 
     # Build all files list to process
@@ -882,15 +899,15 @@ def process_decompiled_checker(path):
                             malicious_list.append(os.path.abspath(filename))
                             blob = file_to_base64_buf(filename)
                             malicious_blobs[os.path.abspath(filename)] = blob
-                            os.remove(filename)
-                            print(filename, 'MALICIOUS removed!!')
+                            move_file(filename, folder_name)
+                            print(filename, 'MALICIOUS moved!!')
                             total_malicious += 1
                             break
 
                     # if check_yara(filename):
                     #     malicious_list.append(os.path.abspath(filename))
-                    #     os.remove(filename)
-                    #     print(filename, 'MALICIOUS removed!!')
+                    #     move_file(filename, folder_name)
+                    #     print(filename, 'MALICIOUS moved!!')
                     #     total_malicious += 1
                     #     break
 
@@ -898,9 +915,9 @@ def process_decompiled_checker(path):
                         malicious_list.append(os.path.abspath(filename))
                         blob = file_to_base64_buf(filename)
                         malicious_blobs[os.path.abspath(filename)] = blob
-                        os.remove(filename)
+                        move_file(filename, folder_name)
+                        print(filename, 'MALICIOUS moved!!')
                         total_malicious += 1
-                        print(filename, 'MALICIOUS removed!!')
                         break
         except:
             pass
@@ -913,13 +930,24 @@ def process_decompiled_checker(path):
                     blob = file_to_base64_buf(filename)
                     malicious_blobs[os.path.abspath(filename)] = blob
                     total_malicious += 1
-                    os.remove(filename)
-                    print(filename, 'removed!!')
+                    move_file(filename, folder_name)
+                    print(filename, 'MALICIOUS moved!!')
                     break
         except:
             pass
 
-    return total_objects, total_malicious, total_archives, malicious_list, malicious_blobs
+    return total_objects, total_malicious, total_archives, malicious_list, folder_name
+
+
+def process_enum_malicious(folder_name):
+        f = []
+        d = {}
+
+        malicious_path = os.path.abspath('media' + '/tmp/' + str(folder_name)) + '/'
+        print("* Malicious dir:", malicious_path)
+
+        d = path_to_dict(malicious_path)
+        return d
 
 
 def check_for_sql_inj(data):
